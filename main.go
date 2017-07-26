@@ -2,21 +2,26 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/Luzifer/rconfig"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	stathat "github.com/stathat/go"
+)
+
+const (
+	metricPing        = "[CS] Ping"
+	metricThresholdRX = "[CS] Threshold RX"
+	metricThresholdTX = "[CS] Threshold TX"
 )
 
 var (
 	cfg struct {
 		Hostname       string        `flag:"hostname" default:"" description:"Hostname / IP of the sparkyfish server" validate:"nonzero"`
 		Interval       time.Duration `flag:"interval" default:"15m" description:"Interval to execute test in"`
-		Listen         string        `flag:"listen" default:":3000" description:"IP/Port to listen on"`
 		LogLevel       string        `flag:"log-level" default:"info" description:"Set log level (debug, info, warning, error)"`
+		StatHatEZKey   string        `flag:"stathat-ezkey" default:"" description:"Key to post metrics to" validate:"nonzero"`
 		Port           int           `flag:"port" default:"7121" description:"Port the sparkyfish server is running on"`
 		VersionAndExit bool          `flag:"version" default:"false" description:"Print version information and exit"`
 	}
@@ -42,21 +47,16 @@ func init() {
 }
 
 func main() {
-	go func() {
+	if err := updateStats(execTest()); err != nil {
+		log.Error(err.Error())
+	}
+
+	for range time.Tick(cfg.Interval) {
 		if err := updateStats(execTest()); err != nil {
 			log.Error(err.Error())
+			continue
 		}
-
-		for range time.Tick(cfg.Interval) {
-			if err := updateStats(execTest()); err != nil {
-				log.Error(err.Error())
-				continue
-			}
-		}
-	}()
-
-	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(cfg.Listen, nil)
+	}
 }
 
 func updateStats(t *testResult, err error) error {
@@ -64,9 +64,9 @@ func updateStats(t *testResult, err error) error {
 		return err
 	}
 
-	pingAvg.Set(t.Ping.Avg)
-	thresholdAvg.WithLabelValues("recv").Set(t.Receive.Avg)
-	thresholdAvg.WithLabelValues("send").Set(t.Send.Avg)
+	stathat.PostEZValue(metricPing, cfg.StatHatEZKey, t.Ping.Avg)
+	stathat.PostEZValue(metricThresholdRX, cfg.StatHatEZKey, t.Receive.Avg)
+	stathat.PostEZValue(metricThresholdTX, cfg.StatHatEZKey, t.Send.Avg)
 
 	return nil
 }
