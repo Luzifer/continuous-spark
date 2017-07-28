@@ -14,11 +14,10 @@ const (
 	protocolVersion      uint16 = 0x00 // Protocol Version
 	blockSize            int64  = 200  // size (KB) of each block of data copied to/from remote
 	throughputTestLength uint   = 10   // length of time to conduct each throughput test
-	maxPingTestLength    uint   = 10   // maximum time for ping test to complete
 	numPings             int    = 30   // number of pings to attempt
 
-	KBPS = 1024.0
-	MBPS = 1024.0 * KBPS
+	kbps = 1024.0
+	mbps = 1024.0 * kbps
 )
 
 type testResult struct {
@@ -51,12 +50,12 @@ func (t testResult) String() string {
 		t.Ping.Max,
 		t.Ping.Avg,
 		t.Ping.Dev,
-		t.Receive.Min/MBPS,
-		t.Receive.Max/MBPS,
-		t.Receive.Avg/MBPS,
-		t.Send.Min/MBPS,
-		t.Send.Max/MBPS,
-		t.Send.Avg/MBPS,
+		t.Receive.Min/mbps,
+		t.Receive.Max/mbps,
+		t.Receive.Avg/mbps,
+		t.Send.Min/mbps,
+		t.Send.Max/mbps,
+		t.Send.Avg/mbps,
 	)
 }
 
