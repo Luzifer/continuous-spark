@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -23,6 +24,7 @@ var (
 		LogLevel       string        `flag:"log-level" default:"info" description:"Set log level (debug, info, warning, error)"`
 		StatHatEZKey   string        `flag:"stathat-ezkey" default:"" description:"Key to post metrics to" validate:"nonzero"`
 		Port           int           `flag:"port" default:"7121" description:"Port the sparkyfish server is running on"`
+		TSVFile        string        `flag:"tsv-file" default:"measures.tsv" description:"File to write the results to"`
 		VersionAndExit bool          `flag:"version" default:"false" description:"Print version information and exit"`
 	}
 
@@ -68,7 +70,33 @@ func updateStats(t *testResult, err error) error {
 	stathat.PostEZValue(metricThresholdRX, cfg.StatHatEZKey, t.Receive.Avg)
 	stathat.PostEZValue(metricThresholdTX, cfg.StatHatEZKey, t.Send.Avg)
 
-	return nil
+	return writeTSV(t)
+}
+
+func writeTSV(t *testResult) error {
+	if _, err := os.Stat(cfg.TSVFile); err != nil && os.IsNotExist(err) {
+		if err := ioutil.WriteFile(cfg.TSVFile, []byte("Date\tPing Min (ms)\tPing Avg (ms)\tPing Max (ms)\tPing StdDev (ms)\tRX Avg (bps)\tTX Avg (bps)\n"), 0644); err != nil {
+			return err
+		}
+	}
+
+	f, err := os.OpenFile(cfg.TSVFile, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = fmt.Fprintf(f, "%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.0f\t%.0f\n",
+		time.Now().Format(time.RFC3339),
+		t.Ping.Min,
+		t.Ping.Avg,
+		t.Ping.Max,
+		t.Ping.Dev,
+		t.Receive.Avg,
+		t.Send.Avg,
+	)
+
+	return err
 }
 
 func execTest() (*testResult, error) {
