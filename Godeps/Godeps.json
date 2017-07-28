@@ -1,0 +1,37 @@
+{
+	"ImportPath": "github.com/Luzifer/continuous-spark",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
+	"Deps": [
+		{
+			"ImportPath": "github.com/Luzifer/rconfig",
+			"Comment": "v1.2.0",
+			"Rev": "7aef1d393c1e2d0758901853b59981c7adc67c7e"
+		},
+		{
+			"ImportPath": "github.com/sirupsen/logrus",
+			"Comment": "v1.0.0-4-g59d0ca4",
+			"Rev": "59d0ca41e5faad81cac03f7a7d84ba80d9cc9673"
+		},
+		{
+			"ImportPath": "github.com/spf13/pflag",
+			"Rev": "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
+		},
+		{
+			"ImportPath": "github.com/stathat/go",
+			"Rev": "74669b9f388d9d788c97399a0824adbfee78400e"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "739734461d1c916b6c72a63d7efda2b27edb369f"
+		},
+		{
+			"ImportPath": "gopkg.in/validator.v2",
+			"Rev": "07ffaad256c8e957050ad83d6472eb97d785013d"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b"
+		}
+	]
+}
