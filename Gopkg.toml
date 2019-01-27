@@ -26,6 +26,10 @@
 
 
 [[constraint]]
+  name = "github.com/influxdata/influxdb"
+  version = "1.7.3"
+
+[[constraint]]
   name = "github.com/Luzifer/rconfig"
   version = "1.2.0"
 

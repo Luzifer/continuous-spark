@@ -6,27 +6,28 @@ import (
 	"os"
 	"time"
 
-	"github.com/Luzifer/rconfig"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	stathat "github.com/stathat/go"
-)
 
-const (
-	metricPing        = "[CS] Ping"
-	metricThresholdRX = "[CS] Threshold RX"
-	metricThresholdTX = "[CS] Threshold TX"
+	"github.com/Luzifer/rconfig"
 )
 
 var (
 	cfg struct {
-		Hostname       string        `flag:"hostname" default:"" description:"Hostname / IP of the sparkyfish server" validate:"nonzero"`
+		InfluxDB       string        `flag:"influx-db" default:"" description:"Name of the database to write to (if unset, InfluxDB feature is disabled)"`
+		InfluxHost     string        `flag:"influx-host" default:"http://localhost:8086" description:"Host with protocol of the InfluxDB"`
+		InfluxPass     string        `flag:"influx-pass" default:"" description:"Password for the InfluxDB user"`
+		InfluxUser     string        `flag:"influx-user" default:"" description:"Username for the InfluxDB connection"`
 		Interval       time.Duration `flag:"interval" default:"15m" description:"Interval to execute test in"`
 		LogLevel       string        `flag:"log-level" default:"info" description:"Set log level (debug, info, warning, error)"`
-		StatHatEZKey   string        `flag:"stathat-ezkey" default:"" description:"Key to post metrics to" validate:"nonzero"`
+		OneShot        bool          `flag:"oneshot,1" default:"false" description:"Execute one measurement and exit (for cron execution)"`
 		Port           int           `flag:"port" default:"7121" description:"Port the sparkyfish server is running on"`
-		TSVFile        string        `flag:"tsv-file" default:"measures.tsv" description:"File to write the results to"`
+		Server         string        `flag:"server" default:"" description:"Hostname / IP of the sparkyfish server" validate:"nonzero"`
+		TSVFile        string        `flag:"tsv-file" default:"measures.tsv" description:"File to write the results to (set to empty string to disable)"`
 		VersionAndExit bool          `flag:"version" default:"false" description:"Print version information and exit"`
 	}
+
+	metrics *metricsSender
 
 	version = "dev"
 )
@@ -49,40 +50,112 @@ func init() {
 }
 
 func main() {
+	var err error
+
+	if cfg.InfluxDB != "" {
+		if metrics, err = NewMetricsSender(cfg.InfluxHost, cfg.InfluxUser, cfg.InfluxPass, cfg.InfluxDB); err != nil {
+			log.WithError(err).Fatalf("Unable to initialize InfluxDB sender")
+		}
+	}
+
 	if err := updateStats(execTest()); err != nil {
-		log.Error(err.Error())
+		log.WithError(err).Error("Unable to update stats")
+	}
+
+	if cfg.OneShot {
+		// Return before loop for oneshot execution
+		if err := metrics.ForceTransmit(); err != nil {
+			log.WithError(err).Error("Unable to store metrics")
+		}
+		return
 	}
 
 	for range time.Tick(cfg.Interval) {
 		if err := updateStats(execTest()); err != nil {
-			log.Error(err.Error())
-			continue
+			log.WithError(err).Error("Unable to update stats")
 		}
 	}
 }
 
 func updateStats(t *testResult, err error) error {
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Got error from test function")
 	}
 
-	stathat.PostEZValue(metricPing, cfg.StatHatEZKey, t.Ping.Avg)
-	stathat.PostEZValue(metricThresholdRX, cfg.StatHatEZKey, t.Receive.Avg)
-	stathat.PostEZValue(metricThresholdTX, cfg.StatHatEZKey, t.Send.Avg)
+	hostname, err := os.Hostname()
+	if err != nil {
+		return errors.Wrap(err, "Unable to get local hostname")
+	}
 
-	return writeTSV(t)
+	if metrics != nil {
+		if err := metrics.RecordPoint(
+			"sparkyfish_ping",
+			map[string]string{
+				"hostname": hostname,
+				"server":   cfg.Server,
+			},
+			map[string]interface{}{
+				"avg": t.Ping.Avg,
+				"min": t.Ping.Min,
+				"max": t.Ping.Max,
+				"dev": t.Ping.Dev,
+			},
+		); err != nil {
+			return errors.Wrap(err, "Unable to record 'ping' metric")
+		}
+
+		if err := metrics.RecordPoint(
+			"sparkyfish_transfer",
+			map[string]string{
+				"direction": "down",
+				"hostname":  hostname,
+				"server":    cfg.Server,
+			},
+			map[string]interface{}{
+				"avg": t.Receive.Avg,
+				"min": t.Receive.Min,
+				"max": t.Receive.Max,
+			},
+		); err != nil {
+			return errors.Wrap(err, "Unable to record 'down' metric")
+		}
+
+		if err := metrics.RecordPoint(
+			"sparkyfish_transfer",
+			map[string]string{
+				"direction": "up",
+				"hostname":  hostname,
+				"server":    cfg.Server,
+			},
+			map[string]interface{}{
+				"avg": t.Send.Avg,
+				"min": t.Send.Min,
+				"max": t.Send.Max,
+			},
+		); err != nil {
+			return errors.Wrap(err, "Unable to record 'up' metric")
+		}
+	}
+
+	if cfg.TSVFile != "" {
+		if err := writeTSV(t); err != nil {
+			return errors.Wrap(err, "Unable to write TSV file")
+		}
+	}
+
+	return nil
 }
 
 func writeTSV(t *testResult) error {
 	if _, err := os.Stat(cfg.TSVFile); err != nil && os.IsNotExist(err) {
 		if err := ioutil.WriteFile(cfg.TSVFile, []byte("Date\tPing Min (ms)\tPing Avg (ms)\tPing Max (ms)\tPing StdDev (ms)\tRX Avg (bps)\tTX Avg (bps)\n"), 0644); err != nil {
-			return err
+			return errors.Wrap(err, "Unable to write initial TSV headers")
 		}
 	}
 
 	f, err := os.OpenFile(cfg.TSVFile, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to open TSV file")
 	}
 	defer f.Close()
 
@@ -96,19 +169,19 @@ func writeTSV(t *testResult) error {
 		t.Send.Avg,
 	)
 
-	return err
+	return errors.Wrap(err, "Unable to write measurement to TSV file")
 }
 
 func execTest() (*testResult, error) {
 	t := newTestResult()
 
-	sc := newSparkClient(cfg.Hostname, cfg.Port)
+	sc := newSparkClient(cfg.Server, cfg.Port)
 	if err := sc.ExecutePingTest(t); err != nil {
-		return nil, fmt.Errorf("Ping test fucked up: %s", err)
+		return nil, errors.Wrap(err, "Ping-test failed")
 	}
 
 	if err := sc.ExecuteThroughputTest(t); err != nil {
-		return nil, fmt.Errorf("Throughput test fucked up: %s", err)
+		return nil, errors.Wrap(err, "Throughput test failed")
 	}
 
 	log.Debugf("%s", t)

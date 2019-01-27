@@ -10,6 +10,36 @@
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:718c57979a9197414a044fff2028e57cb9fe145069e4f507059755bfe87f1bfe"
+  name = "github.com/influxdata/influxdb"
+  packages = [
+    "client/v2",
+    "models",
+    "pkg/escape",
+  ]
+  pruneopts = "NUT"
+  revision = "698dbc789aff13c2678357a6b93ff73dd7136571"
+  version = "v1.7.3"
+
+[[projects]]
+  digest = "1:937258f1293bc9295b4789b0abea5b4ec030e3caecb65a4e1dc0b6999957a5ed"
+  name = "github.com/influxdata/platform"
+  packages = [
+    "models",
+    "pkg/escape",
+  ]
+  pruneopts = "NUT"
+  revision = "0f79e4ea3248354c789cba274542e0a8e55971db"
+
+[[projects]]
+  digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
+
+[[projects]]
   digest = "1:e977852d2828769521a7da3a2fed51416ccc9d7e8d5ca0e63c64066f0bfd5f32"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
@@ -22,14 +52,6 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
-
-[[projects]]
-  digest = "1:f7da4c8f89b9af6758dda1bf5083b80e0c2ba1598f85fea8da788133be1f576d"
-  name = "github.com/stathat/go"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "74669b9f388d9d788c97399a0824adbfee78400e"
   version = "v1.0.0"
 
 [[projects]]
@@ -58,8 +80,9 @@
   analyzer-version = 1
   input-imports = [
     "github.com/Luzifer/rconfig",
+    "github.com/influxdata/influxdb/client/v2",
+    "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
-    "github.com/stathat/go",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
