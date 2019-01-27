@@ -4,6 +4,8 @@ import (
 	"math"
 	"sort"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type pingHistory []int64
@@ -12,18 +14,20 @@ func (s *sparkClient) ExecutePingTest(t *testResult) error {
 	ph := pingHistory{}
 
 	if err := s.connect(); err != nil {
-		return err
+		return errors.Wrap(err, "Unable to connect")
 	}
 
 	if err := s.writeCommand("ECO"); err != nil {
-		return err
+		return errors.Wrap(err, "Unable to send ECO command")
 	}
 
 	buf := make([]byte, 1)
 
 	for i := 0; i < numPings; i++ {
 		start := time.Now()
-		s.conn.Write([]byte{46})
+		if _, err := s.conn.Write([]byte{46}); err != nil {
+			return err
+		}
 
 		if _, err := s.conn.Read(buf); err != nil {
 			return err

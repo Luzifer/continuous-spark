@@ -3,36 +3,37 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net"
 	"syscall"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 func (s *sparkClient) ExecuteThroughputTest(t *testResult) error {
 	if err := s.runSendTest(t); err != nil {
-		return err
+		return errors.Wrap(err, "Send-test failed")
 	}
-	return s.runRecvTest(t)
+	return errors.Wrap(s.runRecvTest(t), "Recv-test failed")
 }
 
 func (s *sparkClient) runSendTest(t *testResult) error {
 	data := make([]byte, 1024*blockSize)
 	if _, err := rand.Read(data); err != nil {
-		return fmt.Errorf("Was unable to gather random data: %s", err)
+		return errors.Wrap(err, "Unable to gather random data")
 	}
 	dataReader := bytes.NewReader(data)
 
 	if err := s.connect(); err != nil {
-		return err
+		return errors.Wrap(err, "Unable to connect")
 	}
 	defer s.conn.Close()
 
 	if err := s.writeCommand("RCV"); err != nil {
-		return err
+		return errors.Wrap(err, "Unable to send RCV command")
 	}
 
 	var (
@@ -57,7 +58,7 @@ func (s *sparkClient) runSendTest(t *testResult) error {
 				break
 			}
 
-			return fmt.Errorf("Error copying: %s", err)
+			return errors.Wrap(err, "Unable to copy data")
 		}
 
 		bps := float64(1024*blockSize*8) / (float64(time.Since(start).Nanoseconds()) / float64(time.Second.Nanoseconds()))
@@ -69,7 +70,9 @@ func (s *sparkClient) runSendTest(t *testResult) error {
 		}
 		blockCount++
 
-		dataReader.Seek(0, 0)
+		if _, err := dataReader.Seek(0, 0); err != nil {
+			return errors.Wrap(err, "Unable to seek")
+		}
 
 		if time.Since(totalStart) > time.Duration(throughputTestLength)*time.Second {
 			break
@@ -84,12 +87,12 @@ func (s *sparkClient) runSendTest(t *testResult) error {
 
 func (s *sparkClient) runRecvTest(t *testResult) error {
 	if err := s.connect(); err != nil {
-		return err
+		return errors.Wrap(err, "Unable to connect")
 	}
 	defer s.conn.Close()
 
 	if err := s.writeCommand("SND"); err != nil {
-		return err
+		return errors.Wrap(err, "Unable to send SND command")
 	}
 
 	var (
@@ -111,7 +114,7 @@ func (s *sparkClient) runRecvTest(t *testResult) error {
 				break
 			}
 
-			return fmt.Errorf("Error copying: %s", err)
+			return errors.Wrap(err, "Unable to copy data")
 		}
 
 		bps := float64(1024*blockSize*8) / (float64(time.Since(start).Nanoseconds()) / float64(time.Second.Nanoseconds()))

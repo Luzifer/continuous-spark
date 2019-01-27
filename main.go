@@ -53,7 +53,7 @@ func main() {
 	var err error
 
 	if cfg.InfluxDB != "" {
-		if metrics, err = NewMetricsSender(cfg.InfluxHost, cfg.InfluxUser, cfg.InfluxPass, cfg.InfluxDB); err != nil {
+		if metrics, err = newMetricsSender(cfg.InfluxHost, cfg.InfluxUser, cfg.InfluxPass, cfg.InfluxDB); err != nil {
 			log.WithError(err).Fatalf("Unable to initialize InfluxDB sender")
 		}
 	}

@@ -21,7 +21,7 @@ type metricsSender struct {
 	influxDB string
 }
 
-func NewMetricsSender(influxHost, influxUser, influxPass, influxDatabase string) (*metricsSender, error) {
+func newMetricsSender(influxHost, influxUser, influxPass, influxDatabase string) (*metricsSender, error) {
 	out := &metricsSender{
 		errs:     make(chan error, 10),
 		influxDB: influxDatabase,
@@ -40,7 +40,7 @@ func (m *metricsSender) ForceTransmit() error {
 func (m *metricsSender) RecordPoint(name string, tags map[string]string, fields map[string]interface{}) error {
 	pt, err := influx.NewPoint(name, tags, fields, time.Now())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to create point")
 	}
 
 	m.batchLock.Lock()
@@ -56,7 +56,7 @@ func (m *metricsSender) resetBatch() error {
 	})
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to create new points batch")
 	}
 
 	m.batch = b
@@ -80,9 +80,7 @@ func (m *metricsSender) transmit() error {
 	if err := m.client.Write(m.batch); err != nil {
 		return errors.Wrap(err, "Unable to write recorded points")
 	}
-	m.resetBatch()
-
-	return nil
+	return errors.Wrap(m.resetBatch(), "Unable to reset batch")
 }
 
 func (m *metricsSender) initialize(influxHost, influxUser, influxPass string) error {
@@ -94,12 +92,12 @@ func (m *metricsSender) initialize(influxHost, influxUser, influxPass string) er
 	})
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to create InfluxDB HTTP client")
 	}
 
 	m.client = influxClient
 	if err := m.resetBatch(); err != nil {
-		return err
+		return errors.Wrap(err, "Unable to reset batch")
 	}
 	go m.sendLoop()
 
