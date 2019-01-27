@@ -32,6 +32,14 @@
   revision = "0f79e4ea3248354c789cba274542e0a8e55971db"
 
 [[projects]]
+  digest = "1:4059c14e87a2de3a434430340521b5feece186c1469eff0834c29a63870de3ed"
+  name = "github.com/konsorten/go-windows-terminal-sequences"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -40,40 +48,55 @@
   version = "v0.8.1"
 
 [[projects]]
-  digest = "1:e977852d2828769521a7da3a2fed51416ccc9d7e8d5ca0e63c64066f0bfd5f32"
+  digest = "1:e256b859ab89f005f2f639f5ed9807d0873d9135e27c6382f419b840ff9abe71"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "59d0ca41e5faad81cac03f7a7d84ba80d9cc9673"
+  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
+  version = "v1.3.0"
 
 [[projects]]
-  digest = "1:3ab855aa584d08db6541ce99dad60c12bd6a328ecb8a7358363887f85c976347"
+  digest = "1:9d8420bbf131d1618bde6530af37c3799340d3762cc47210c1d9532a4c3a2779"
   name = "github.com/spf13/pflag"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
+  revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
+  version = "v1.0.3"
 
 [[projects]]
-  digest = "1:eb24bda4388b169c14b6dcfd910eab9bfada54502fe4d1da80889730fbc63b41"
-  name = "golang.org/x/sys"
-  packages = ["unix"]
+  branch = "master"
+  digest = "1:38f553aff0273ad6f367cb0a0f8b6eecbaef8dc6cb8b50e57b6a81c1d5b1e332"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
   pruneopts = "NUT"
-  revision = "739734461d1c916b6c72a63d7efda2b27edb369f"
+  revision = "057139ce5d2bdbe6fe73c53679e24e9cf007f637"
 
 [[projects]]
-  digest = "1:04dfacfe3f51ed62d0c82fd6243c27eb4828850407398227c629fcd2934ab3ca"
+  branch = "master"
+  digest = "1:a669a86ec285537ab21ad4440697eb657a1387727537c3646e8bd4de66d291ec"
+  name = "golang.org/x/sys"
+  packages = [
+    "unix",
+    "windows",
+  ]
+  pruneopts = "NUT"
+  revision = "b90733256f2e882e81d52f9126de08df5615afd9"
+
+[[projects]]
+  branch = "v2"
+  digest = "1:1ab6db2d2bd353449c5d1e976ba7a92a0ece6e83aaab3e6674f8f2f1faebb85a"
   name = "gopkg.in/validator.v2"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "07ffaad256c8e957050ad83d6472eb97d785013d"
+  revision = "135c24b11c19e52befcae2ec3fca5d9b78c4e98e"
 
 [[projects]]
-  digest = "1:335f30dbcc562002cac406b45584526ca0e9a97675db4c7edbd2a7c6f99e31dd"
+  digest = "1:18108594151654e9e696b27b181b953f9a90b16bf14d253dd1b397b025a1487f"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b"
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
+  version = "v2.2.2"
 
 [solve-meta]
   analyzer-name = "dep"
