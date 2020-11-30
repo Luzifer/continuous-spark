@@ -64,8 +64,10 @@ func main() {
 
 	if cfg.OneShot {
 		// Return before loop for oneshot execution
-		if err := metrics.ForceTransmit(); err != nil {
-			log.WithError(err).Error("Unable to store metrics")
+		if metrics != nil {
+			if err := metrics.ForceTransmit(); err != nil {
+				log.WithError(err).Error("Unable to store metrics")
+			}
 		}
 		return
 	}
@@ -148,7 +150,7 @@ func updateStats(t *testResult, err error) error {
 
 func writeTSV(t *testResult) error {
 	if _, err := os.Stat(cfg.TSVFile); err != nil && os.IsNotExist(err) {
-		if err := ioutil.WriteFile(cfg.TSVFile, []byte("Date\tPing Min (ms)\tPing Avg (ms)\tPing Max (ms)\tPing StdDev (ms)\tRX Avg (bps)\tTX Avg (bps)\n"), 0644); err != nil {
+		if err := ioutil.WriteFile(cfg.TSVFile, []byte("Date\tPing Min (ms)\tPing Avg (ms)\tPing Max (ms)\tPing StdDev (ms)\tRX Avg (bps)\tTX Avg (bps)\n"), 0o644); err != nil {
 			return errors.Wrap(err, "Unable to write initial TSV headers")
 		}
 	}
