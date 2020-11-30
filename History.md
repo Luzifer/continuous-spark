@@ -1,3 +1,8 @@
+# 1.0.2 / 2020-11-30
+
+  * Prevent crash when influx client is not present
+  * Switch to go modules
+
 # 1.0.1 / 2019-01-27
 
   * Lint: Fix linter errors, improve error handling
