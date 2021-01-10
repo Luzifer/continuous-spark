@@ -1,3 +1,7 @@
+# 1.0.3 / 2021-01-10
+
+  * Fix: Metrics sender blocked on errors
+
 # 1.0.2 / 2020-11-30
 
   * Prevent crash when influx client is not present
