@@ -56,6 +56,12 @@ func main() {
 		if metrics, err = newMetricsSender(cfg.InfluxHost, cfg.InfluxUser, cfg.InfluxPass, cfg.InfluxDB); err != nil {
 			log.WithError(err).Fatalf("Unable to initialize InfluxDB sender")
 		}
+
+		go func() {
+			for err := range metrics.Errors() {
+				log.WithError(err).Error("Unable to transmit metrics")
+			}
+		}()
 	}
 
 	if err := updateStats(execTest()); err != nil {
