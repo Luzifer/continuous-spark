@@ -18,6 +18,7 @@ var (
 		InfluxHost     string        `flag:"influx-host" default:"http://localhost:8086" description:"Host with protocol of the InfluxDB"`
 		InfluxPass     string        `flag:"influx-pass" default:"" description:"Password for the InfluxDB user"`
 		InfluxUser     string        `flag:"influx-user" default:"" description:"Username for the InfluxDB connection"`
+		Interface      string        `flag:"interface" default:"" description:"Bind to interface for testing a specific interface throughput"`
 		Interval       time.Duration `flag:"interval" default:"15m" description:"Interval to execute test in"`
 		LogLevel       string        `flag:"log-level" default:"info" description:"Set log level (debug, info, warning, error)"`
 		OneShot        bool          `flag:"oneshot,1" default:"false" description:"Execute one measurement and exit (for cron execution)"`
@@ -183,7 +184,7 @@ func writeTSV(t *testResult) error {
 func execTest() (*testResult, error) {
 	t := newTestResult()
 
-	sc := newSparkClient(cfg.Server, cfg.Port)
+	sc := newSparkClient(cfg.Server, cfg.Port, cfg.Interface)
 	if err := sc.ExecutePingTest(t); err != nil {
 		return nil, errors.Wrap(err, "Ping-test failed")
 	}

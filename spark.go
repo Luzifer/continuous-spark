@@ -61,19 +61,42 @@ func (t testResult) String() string {
 }
 
 type sparkClient struct {
-	remote string
-	conn   net.Conn
-	reader *bufio.Reader
+	bindInterfaceName string
+	remote            string
+	conn              net.Conn
+	reader            *bufio.Reader
 }
 
-func newSparkClient(hostname string, port int) *sparkClient {
+func newSparkClient(hostname string, port int, bindInterfaceName string) *sparkClient {
 	return &sparkClient{
-		remote: fmt.Sprintf("%s:%d", hostname, port),
+		bindInterfaceName: bindInterfaceName,
+		remote:            fmt.Sprintf("%s:%d", hostname, port),
 	}
 }
 
 func (s *sparkClient) dial() error {
-	c, err := net.Dial("tcp", s.remote)
+	d := net.Dialer{}
+
+	if s.bindInterfaceName != "" {
+		iface, err := net.InterfaceByName(s.bindInterfaceName)
+		if err != nil {
+			return errors.Wrap(err, "select interface")
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return errors.Wrap(err, "get interface IPs")
+		}
+
+		if len(addrs) == 0 {
+			return errors.New("no addresses found on interface")
+		}
+
+		d.LocalAddr = &net.TCPAddr{IP: addrs[0].(*net.IPNet).IP}
+		log.WithField("ip", d.LocalAddr).Warn("Set local address")
+	}
+
+	c, err := d.Dial("tcp", s.remote)
 	if err != nil {
 		return errors.Wrap(err, "Unable to dial")
 	}
