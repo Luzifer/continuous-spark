@@ -1,3 +1,10 @@
+# 1.1.0 / 2024-12-12
+
+  * Add source interface selection
+  * Modernize code, fix linter errors
+  * Replace CI system
+  * Update Go dependencies
+
 # 1.0.3 / 2021-01-10
 
   * Fix: Metrics sender blocked on errors
