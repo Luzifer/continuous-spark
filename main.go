@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Luzifer/rconfig"
 )
+
+const tsvPermission = 0o600
 
 var (
 	cfg struct {
@@ -33,47 +33,52 @@ var (
 	version = "dev"
 )
 
-func init() {
-	if err := rconfig.ParseAndValidate(&cfg); err != nil {
-		log.Fatalf("Unable to parse CLI parameters: %s", err)
+func initApp() (err error) {
+	if err = rconfig.ParseAndValidate(&cfg); err != nil {
+		return fmt.Errorf("parsing CLI params: %w", err)
 	}
 
-	if cfg.VersionAndExit {
-		fmt.Printf("continuous-spark %s\n", version)
-		os.Exit(0)
+	l, err := logrus.ParseLevel(cfg.LogLevel)
+	if err != nil {
+		return fmt.Errorf("parsing log-level: %w", err)
 	}
+	logrus.SetLevel(l)
 
-	if l, err := log.ParseLevel(cfg.LogLevel); err == nil {
-		log.SetLevel(l)
-	} else {
-		log.Fatalf("Invalid log level: %s", err)
-	}
+	return nil
 }
 
 func main() {
 	var err error
+	if err = initApp(); err != nil {
+		logrus.WithError(err).Fatal("initializing app")
+	}
+
+	if cfg.VersionAndExit {
+		fmt.Printf("continuous-spark %s\n", version) //nolint:forbidigo
+		os.Exit(0)
+	}
 
 	if cfg.InfluxDB != "" {
 		if metrics, err = newMetricsSender(cfg.InfluxHost, cfg.InfluxUser, cfg.InfluxPass, cfg.InfluxDB); err != nil {
-			log.WithError(err).Fatalf("Unable to initialize InfluxDB sender")
+			logrus.WithError(err).Fatalf("initializing InfluxDB sender")
 		}
 
 		go func() {
 			for err := range metrics.Errors() {
-				log.WithError(err).Error("Unable to transmit metrics")
+				logrus.WithError(err).Error("transmitting metrics")
 			}
 		}()
 	}
 
 	if err := updateStats(execTest()); err != nil {
-		log.WithError(err).Error("Unable to update stats")
+		logrus.WithError(err).Error("updating stats")
 	}
 
 	if cfg.OneShot {
 		// Return before loop for oneshot execution
 		if metrics != nil {
 			if err := metrics.ForceTransmit(); err != nil {
-				log.WithError(err).Error("Unable to store metrics")
+				logrus.WithError(err).Error("storing metrics")
 			}
 		}
 		return
@@ -81,19 +86,19 @@ func main() {
 
 	for range time.Tick(cfg.Interval) {
 		if err := updateStats(execTest()); err != nil {
-			log.WithError(err).Error("Unable to update stats")
+			logrus.WithError(err).Error("updating stats")
 		}
 	}
 }
 
 func updateStats(t *testResult, err error) error {
 	if err != nil {
-		return errors.Wrap(err, "Got error from test function")
+		return err
 	}
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		return errors.Wrap(err, "Unable to get local hostname")
+		return fmt.Errorf("getting hostname: %w", err)
 	}
 
 	if metrics != nil {
@@ -110,7 +115,7 @@ func updateStats(t *testResult, err error) error {
 				"dev": t.Ping.Dev,
 			},
 		); err != nil {
-			return errors.Wrap(err, "Unable to record 'ping' metric")
+			return fmt.Errorf("recording ping-metric: %w", err)
 		}
 
 		if err := metrics.RecordPoint(
@@ -126,7 +131,7 @@ func updateStats(t *testResult, err error) error {
 				"max": t.Receive.Max,
 			},
 		); err != nil {
-			return errors.Wrap(err, "Unable to record 'down' metric")
+			return fmt.Errorf("recording down-metric: %w", err)
 		}
 
 		if err := metrics.RecordPoint(
@@ -142,33 +147,37 @@ func updateStats(t *testResult, err error) error {
 				"max": t.Send.Max,
 			},
 		); err != nil {
-			return errors.Wrap(err, "Unable to record 'up' metric")
+			return fmt.Errorf("recording up-metric: %w", err)
 		}
 	}
 
 	if cfg.TSVFile != "" {
 		if err := writeTSV(t); err != nil {
-			return errors.Wrap(err, "Unable to write TSV file")
+			return fmt.Errorf("writing TSV file: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func writeTSV(t *testResult) error {
-	if _, err := os.Stat(cfg.TSVFile); err != nil && os.IsNotExist(err) {
-		if err := ioutil.WriteFile(cfg.TSVFile, []byte("Date\tPing Min (ms)\tPing Avg (ms)\tPing Max (ms)\tPing StdDev (ms)\tRX Avg (bps)\tTX Avg (bps)\n"), 0o644); err != nil {
-			return errors.Wrap(err, "Unable to write initial TSV headers")
+func writeTSV(t *testResult) (err error) {
+	if _, err = os.Stat(cfg.TSVFile); err != nil && os.IsNotExist(err) {
+		if err = os.WriteFile(cfg.TSVFile, []byte("Date\tPing Min (ms)\tPing Avg (ms)\tPing Max (ms)\tPing StdDev (ms)\tRX Avg (bps)\tTX Avg (bps)\n"), tsvPermission); err != nil {
+			return fmt.Errorf("writing TSV headers: %w", err)
 		}
 	}
 
 	f, err := os.OpenFile(cfg.TSVFile, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
-		return errors.Wrap(err, "Unable to open TSV file")
+		return fmt.Errorf("opening TSV file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			logrus.WithError(err).Error("closing TSV file (leaked fd)")
+		}
+	}()
 
-	_, err = fmt.Fprintf(f, "%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.0f\t%.0f\n",
+	if _, err = fmt.Fprintf(f, "%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.0f\t%.0f\n",
 		time.Now().Format(time.RFC3339),
 		t.Ping.Min,
 		t.Ping.Avg,
@@ -176,9 +185,11 @@ func writeTSV(t *testResult) error {
 		t.Ping.Dev,
 		t.Receive.Avg,
 		t.Send.Avg,
-	)
+	); err != nil {
+		return fmt.Errorf("writing measurement: %w", err)
+	}
 
-	return errors.Wrap(err, "Unable to write measurement to TSV file")
+	return nil
 }
 
 func execTest() (*testResult, error) {
@@ -186,13 +197,13 @@ func execTest() (*testResult, error) {
 
 	sc := newSparkClient(cfg.Server, cfg.Port, cfg.Interface)
 	if err := sc.ExecutePingTest(t); err != nil {
-		return nil, errors.Wrap(err, "Ping-test failed")
+		return nil, fmt.Errorf("executing ping-test: %w", err)
 	}
 
 	if err := sc.ExecuteThroughputTest(t); err != nil {
-		return nil, errors.Wrap(err, "Throughput test failed")
+		return nil, fmt.Errorf("executing throughput-test: %w", err)
 	}
 
-	log.Debugf("%s", t)
+	logrus.Debugf("%s", t)
 	return t, nil
 }

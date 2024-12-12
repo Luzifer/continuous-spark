@@ -7,8 +7,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -80,60 +79,60 @@ func (s *sparkClient) dial() error {
 	if s.bindInterfaceName != "" {
 		iface, err := net.InterfaceByName(s.bindInterfaceName)
 		if err != nil {
-			return errors.Wrap(err, "select interface")
+			return fmt.Errorf("selecting interface: %w", err)
 		}
 
 		addrs, err := iface.Addrs()
 		if err != nil {
-			return errors.Wrap(err, "get interface IPs")
+			return fmt.Errorf("getting interface IPs: %w", err)
 		}
 
 		if len(addrs) == 0 {
-			return errors.New("no addresses found on interface")
+			return fmt.Errorf("no addresses found on interface")
 		}
 
 		d.LocalAddr = &net.TCPAddr{IP: addrs[0].(*net.IPNet).IP}
-		log.WithField("ip", d.LocalAddr).Warn("Set local address")
+		logrus.WithField("ip", d.LocalAddr).Warn("Set local address")
 	}
 
 	c, err := d.Dial("tcp", s.remote)
 	if err != nil {
-		return errors.Wrap(err, "Unable to dial")
+		return fmt.Errorf("dialing remote server: %w", err)
 	}
 	s.conn = c
 
 	return nil
 }
 
-func (s *sparkClient) connect() error {
-	if err := s.dial(); err != nil {
-		return errors.Wrapf(err, "Unable to connect to sparkyfish-server %q", s.remote)
+func (s *sparkClient) connect() (err error) {
+	if err = s.dial(); err != nil {
+		return fmt.Errorf("connecting to remote %q: %w", s.remote, err)
 	}
 
 	s.reader = bufio.NewReader(s.conn)
 
-	if err := s.writeCommand(fmt.Sprintf("HELO%d", protocolVersion)); err != nil {
-		return errors.Wrap(err, "Unable to send HELO command")
+	if err = s.writeCommand(fmt.Sprintf("HELO%d", protocolVersion)); err != nil {
+		return fmt.Errorf("writing HELO command: %w", err)
 	}
 
 	return s.readGreeting()
 }
 
-func (s *sparkClient) writeCommand(command string) error {
-	if _, err := fmt.Fprintf(s.conn, "%s\r\n", command); err != nil {
-		return errors.Wrapf(err, "Unable to send command %q", command)
+func (s *sparkClient) writeCommand(command string) (err error) {
+	if _, err = fmt.Fprintf(s.conn, "%s\r\n", command); err != nil {
+		return fmt.Errorf("sending command %q: %w", command, err)
 	}
 	return nil
 }
 
 func (s *sparkClient) readGreeting() error {
 	if helo, err := s.reader.ReadString('\n'); err != nil || strings.TrimSpace(helo) != "HELO" {
-		return errors.New("Unexpected response to greeting")
+		return fmt.Errorf("unexpected response to greeting")
 	}
 
 	cn, err := s.reader.ReadString('\n')
 	if err != nil {
-		return errors.Wrap(err, "Unable to read string")
+		return fmt.Errorf("reading cn string: %w", err)
 	}
 
 	cn = strings.TrimSpace(cn)
@@ -143,14 +142,15 @@ func (s *sparkClient) readGreeting() error {
 
 	loc, err := s.reader.ReadString('\n')
 	if err != nil {
-		return errors.Wrap(err, "Unable to read string")
+		return fmt.Errorf("reading loc string: %w", err)
 	}
 
 	loc = strings.TrimSpace(loc)
 
-	log.WithFields(log.Fields{
+	logrus.WithFields(logrus.Fields{
 		"cn":       cn,
 		"location": loc,
 	}).Debug("Connected to server")
+
 	return nil
 }

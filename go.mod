@@ -7,7 +7,6 @@ toolchain go1.23.4
 require (
 	github.com/Luzifer/rconfig v1.2.0
 	github.com/influxdata/influxdb v1.11.8
-	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 )
 
