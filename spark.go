@@ -6,15 +6,16 @@ import (
 	"math"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	protocolVersion      uint16 = 0x00 // Protocol Version
-	blockSize            int64  = 200  // size (KB) of each block of data copied to/from remote
-	throughputTestLength uint   = 10   // length of time to conduct each throughput test
-	numPings             int    = 30   // number of pings to attempt
+	protocolVersion      = 0x00             // Protocol Version
+	blockSize            = 200              // size (KB) of each block of data copied to/from remote
+	throughputTestLength = 10 * time.Second // length of time to conduct each throughput test
+	numPings             = 30               // number of pings to attempt
 
 	kbps = 1024.0
 	mbps = 1024.0 * kbps

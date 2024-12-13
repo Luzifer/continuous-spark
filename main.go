@@ -7,7 +7,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Luzifer/rconfig"
+	"github.com/Luzifer/rconfig/v2"
 )
 
 const tsvPermission = 0o600
@@ -34,6 +34,7 @@ var (
 )
 
 func initApp() (err error) {
+	rconfig.AutoEnv(true)
 	if err = rconfig.ParseAndValidate(&cfg); err != nil {
 		return fmt.Errorf("parsing CLI params: %w", err)
 	}
