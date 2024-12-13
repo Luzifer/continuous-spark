@@ -1,3 +1,7 @@
+# 1.1.1 / 2024-12-13
+
+  * Fix: Refactor throughput test and fix calculation error from v1.1.0
+
 # 1.1.0 / 2024-12-12
 
   * Add source interface selection
